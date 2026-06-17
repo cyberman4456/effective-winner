@@ -1,0 +1,9 @@
+{
+  "appId": "com.emmanuel.simbi",
+  "appName": "Simbi",
+  "webDir": "public",
+  "server": {
+    "url": "https://simbi-kappa.vercel.app",
+    "cleartext": true
+  }
+}
