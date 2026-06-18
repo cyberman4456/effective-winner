@@ -1,0 +1,56 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Run Dummy Build Script
+        run: npm run build
+
+      - name: Generate Local Android Studio Framework Directory
+        run: npx cap add android
+
+      - name: Generate and Inject App Icons Natively
+        run: npx capacitor-assets generate --android --icon --asset-path assets/icon-only.png
+
+      - name: Sync Web Assets Into Android Project Package
+        run: npx cap sync android
+
+      - name: Compile Application Using Gradle Wrapper (Assemble Debug APK)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Export Downloadable APK Artifact File
+        uses: actions/upload-artifact@v4
+        with:
+          name: Simbi-Debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
