@@ -28,7 +28,7 @@ jobs:
           distribution: 'zulu'
 
       - name: Install Project Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run Dummy Build Script
         run: npm run build
