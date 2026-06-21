@@ -37,9 +37,9 @@ jobs:
         run: npx cap add android
 
       - name: Generate and Inject App Icons Natively
-        run: npx capacitor-assets generate --android
+        run: npx capacitor-assets generate --android --icon --asset-path assets/icon.png
 
-      - name: Sync Web Assets Into Android Project Package
+      - name: Sync Web Assets & Native Bridge Scripts Into Project
         run: npx cap sync android
 
       - name: Compile Application Using Gradle Wrapper (Assemble Debug APK)
