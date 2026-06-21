@@ -1,5 +1,69 @@
 <!DOCTYPE html>
-<html>
-<head><title>Simbi Loader</title></head>
-<body>Connecting to Simbi...</body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simbi Loader</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div>Connecting to Simbi...</div>
+
+    <script src="capacitor.js"></script>
+    
+    <script>
+        // --- 1. FIXED HARDWARE BACK BUTTON INTERCEPTION ---
+        if (window.Capacitor) {
+            const { App } = Capacitor.Plugins;
+            
+            if (App) {
+                App.addListener('backButton', () => {
+                    // Check if your Vercel web view router can navigate back in its history
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        // If on the home screen, exit cleanly rather than crashing/freezing
+                        App.exitApp();
+                    }
+                });
+            }
+
+            // --- 2. FIXED BASE64 DOWNLOAD TO STORAGE BRIDGE ---
+            window.addEventListener('simbiFileDownloaded', async () => {
+                const fileData = window.lastGeneratedFile;
+                if (!fileData) return;
+
+                try {
+                    const { FileSharer } = Capacitor.Plugins;
+                    
+                    // Strip any standard text/mime signatures to extract raw base64 data strings
+                    const rawBase64 = fileData.base64.split(',')[1] || fileData.base64;
+
+                    await FileSharer.share({
+                        filename: fileData.filename,
+                        contentType: fileData.mimeType,
+                        base64Data: rawBase64
+                    });
+                } catch (error) {
+                    console.error("Native storage bridge write failed:", error);
+                }
+            });
+        }
+
+        // Redirect seamlessly to your live web platform
+        window.location.href = "https://simbi-kappa.vercel.app";
+    </script>
+</body>
 </html>
+
