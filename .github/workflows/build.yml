@@ -36,12 +36,6 @@ jobs:
       - name: Generate Local Android Studio Framework Directory
         run: npx cap add android
 
-      - name: Patch Gradle Version for Security Jar Support
-        # Overrides Capacitor's default Gradle wrapper version to prevent bcprov compilation crashes
-        run: |
-          cd android
-          ./gradlew wrapper --gradle-version 8.7 --distribution-type all
-
       - name: Generate and Inject App Icons Natively
         run: npx capacitor-assets generate --android
 
