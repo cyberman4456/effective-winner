@@ -35,19 +35,19 @@
                 });
             }
 
-            // Capgo Native File Sharing Listener
+            // Core Capacitor Native Sharing Linkage
             window.addEventListener('simbiFileDownloaded', async () => {
                 const fileData = window.lastGeneratedFile;
                 if (!fileData) return;
 
                 try {
-                    const { FileSharer } = Capacitor.Plugins;
-                    const rawBase64 = fileData.base64.split(',')[1] || fileData.base64;
-
-                    await FileSharer.share({
-                        filename: fileData.filename,
-                        contentType: fileData.mimeType,
-                        base64Data: rawBase64
+                    const { Share } = Capacitor.Plugins;
+                    
+                    // The core Share plugin allows sharing via standard file data URLs natively
+                    await Share.share({
+                        title: `Share ${fileData.filename}`,
+                        url: fileData.base64, // Passes the dataurl string directly to the sharesheet
+                        dialogTitle: 'Save or Share your Simbi Document'
                     });
                 } catch (error) {
                     console.error("Native system share bridge execution failed:", error);
