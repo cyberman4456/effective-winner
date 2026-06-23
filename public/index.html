@@ -2,61 +2,151 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simbi Loader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Simbi</title>
     <style>
-        body {
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background-color: #121212;
-            color: #ffffff;
-            font-family: sans-serif;
+            position: relative;
+        }
+        #app-container {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        /* Pull-to-Refresh Visual Spinner Indicator Overlay */
+        #refresh-spinner {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: transform 0.1s linear, top 0.2s ease-out;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        #refresh-spinner svg {
+            width: 22px;
+            height: 22px;
+            fill: #9d4edd;
+            transition: transform 0.1s linear;
+        }
+        @keyframes spin-loop {
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div>Connecting to Simbi...</div>
+
+    <div id="refresh-spinner">
+        <svg id="spinner-svg" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    </div>
+
+    <iframe id="app-container" src="https://simbi-kappa.vercel.app"></iframe>
 
     <script src="capacitor.js"></script>
     <script>
-        // Hardware Back Button Navigation Handler
+        const frameView = document.getElementById('app-container');
+        const spinner = document.getElementById('refresh-spinner');
+        const spinnerSvg = document.getElementById('spinner-svg');
+
+        // --- 1. HARDWARE BACK BUTTON NAVIGATION CANAL ---
         if (window.Capacitor) {
             const { App } = Capacitor.Plugins;
             if (App) {
                 App.addListener('backButton', () => {
-                    if (window.history.length > 1) {
-                        window.history.back();
-                    } else {
+                    try {
+                        if (frameView.contentWindow && frameView.contentWindow.history.length > 1) {
+                            frameView.contentWindow.history.back();
+                        } else {
+                            App.exitApp();
+                        }
+                    } catch (e) {
                         App.exitApp();
                     }
                 });
             }
 
-            // Core Capacitor Native Sharing Linkage
-            window.addEventListener('simbiFileDownloaded', async () => {
-                const fileData = window.lastGeneratedFile;
-                if (!fileData) return;
-
-                try {
-                    const { Share } = Capacitor.Plugins;
+            // --- 2. THE AI STUDIO NATIVE FILESYSTEM HANDSHAKE ---
+            window.addEventListener('message', async (event) => {
+                if (event.data && event.data.type === 'SIMBI_FILE_DOWNLOAD') {
+                    const { filename, rawBase64 } = event.data;
                     
-                    // The core Share plugin allows sharing via standard file data URLs natively
-                    await Share.share({
-                        title: `Share ${fileData.filename}`,
-                        url: fileData.base64, // Passes the dataurl string directly to the sharesheet
-                        dialogTitle: 'Save or Share your Simbi Document'
-                    });
-                } catch (error) {
-                    console.error("Native system share bridge execution failed:", error);
+                    try {
+                        const { Filesystem } = Capacitor.Plugins;
+                        
+                        await Filesystem.writeFile({
+                            path: filename,
+                            data: rawBase64,
+                            directory: 'DOCUMENTS' // Saves straight to the system Documents workspace
+                        });
+
+                        alert(`Successfully saved: ${filename} to your device Documents directory!`);
+                    } catch (error) {
+                        console.error('Failed to write file natively:', error);
+                        alert('Storage save error: ' + error.message);
+                    }
                 }
             });
         }
 
-        // Direct handoff to your live Vercel ecosystem
-        window.location.href = "https://simbi-kappa.vercel.app";
+        // --- 3. SWIPE/PULL DOWN TO REFRESH LOGIC ENGINE ---
+        let startY = 0;
+        let activePulling = false;
+
+        window.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            activePulling = true;
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!activePulling) return;
+            const currentY = e.touches[0].clientY;
+            const distance = currentY - startY;
+
+            if (distance > 0) {
+                const travel = Math.min(distance / 2.5, 75); 
+                spinner.style.top = `${travel - 60}px`;
+                spinnerSvg.style.transform = `rotate(${distance * 2}deg)`;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            if (!activePulling) return;
+            activePulling = false;
+            
+            const endY = e.changedTouches[0].clientY;
+            const totalDistance = endY - startY;
+
+            if (totalDistance > 140) {
+                // Lock spinner position down momentarily and refresh the frame target
+                spinner.style.top = '25px';
+                spinnerSvg.style.animation = 'spin-loop 0.8s linear infinite';
+                
+                frameView.src = frameView.src; // Seamless webview asset reload
+
+                setTimeout(() => {
+                    spinner.style.top = '-60px';
+                    spinnerSvg.style.animation = 'none';
+                }, 1200);
+            } else {
+                spinner.style.top = '-60px';
+            }
+        });
     </script>
 </body>
 </html>
