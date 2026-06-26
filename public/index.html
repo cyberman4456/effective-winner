@@ -66,7 +66,7 @@
         if (window.Capacitor) {
             const { App, Filesystem } = Capacitor.Plugins;
 
-            // Hardware Back Button Navigation
+            // --- 1. HARDWARE BACK BUTTON NAVIGATION ---
             if (App) {
                 App.addListener('backButton', () => {
                     try {
@@ -81,33 +81,40 @@
                 });
             }
 
-            // Secure Native File Saving Bridge
+            // --- 2. OPTION B: INTERCEPTING POSTMESSAGE FROM IFRAME ---
             window.addEventListener('message', async (event) => {
-                if (event.data && event.data.type === 'SIMBI_FILE_DOWNLOAD') {
-                    const { filename, rawBase64 } = event.data;
+                const message = event.data;
+                
+                if (message && message.type === 'SIMBI_FILE_DOWNLOAD') {
+                    const { filename, rawBase64 } = message;
                     
                     try {
-                        // Request runtime permissions directly on the phone screen
+                        // Request explicit runtime public storage permissions for Android
                         if (Filesystem.requestPermissions) {
-                            await Filesystem.requestPermissions();
+                            const permission = await Filesystem.requestPermissions();
+                            if (permission.publicStorage !== 'granted') {
+                                console.warn('Storage permission denied by user.');
+                            }
                         }
 
+                        // Write file directly into the local Documents directory using the raw base64 data
                         await Filesystem.writeFile({
                             path: filename,
                             data: rawBase64,
-                            directory: 'DOCUMENTS'
+                            directory: 'DOCUMENTS', // Maps natively to Directory.Documents
+                            recursive: true
                         });
 
-                        alert(`Successfully saved: ${filename} to your Documents folder!`);
+                        alert(`Saved to Documents: ${filename}`);
                     } catch (error) {
-                        console.error('Failed to write file natively:', error);
-                        alert('Storage save error: ' + error.message);
+                        console.error('Failed to write file to storage natively:', error);
+                        alert('Error saving document: ' + error.message);
                     }
                 }
             });
         }
 
-        // Pull Down To Refresh Handling
+        // --- 3. SWIPE DOWN TO REFRESH IMPLEMENTATION ---
         let startY = 0;
         let activePulling = false;
 
@@ -139,7 +146,7 @@
                 spinner.style.top = '25px';
                 spinnerSvg.style.animation = 'spin-loop 0.8s linear infinite';
                 
-                frameView.src = frameView.src;
+                frameView.src = frameView.src; // Reloads the webapp context smoothly
 
                 setTimeout(() => {
                     spinner.style.top = '-60px';
