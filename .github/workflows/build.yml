@@ -36,6 +36,14 @@ jobs:
       - name: Generate Local Android Studio Framework Directory
         run: npx cap add android
 
+      - name: Inject Android Storage Permissions Natively
+        # This injects the explicit read/write lines directly into the AndroidManifest.xml file
+        run: |
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          PERMISSIONS="<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" \/><uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" \/><uses-permission android:name=\"android.permission.MANAGE_EXTERNAL_STORAGE\" \/>"
+          sed -i "s|<manifest[^>]*>|&\n    $PERMISSIONS|" $MANIFEST_PATH
+          echo "Native manifest storage layers injected successfully!"
+
       - name: Generate and Inject App Icons Natively
         run: npx capacitor-assets generate --android
 
