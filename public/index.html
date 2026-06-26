@@ -20,7 +20,6 @@
             border: none;
             display: block;
         }
-        /* Pull-to-Refresh Visual Spinner Indicator Overlay */
         #refresh-spinner {
             position: absolute;
             top: -60px;
@@ -64,9 +63,10 @@
         const spinner = document.getElementById('refresh-spinner');
         const spinnerSvg = document.getElementById('spinner-svg');
 
-        // --- 1. HARDWARE BACK BUTTON NAVIGATION CANAL ---
         if (window.Capacitor) {
-            const { App } = Capacitor.Plugins;
+            const { App, Filesystem } = Capacitor.Plugins;
+
+            // Hardware Back Button Navigation
             if (App) {
                 App.addListener('backButton', () => {
                     try {
@@ -81,21 +81,24 @@
                 });
             }
 
-            // --- 2. THE AI STUDIO NATIVE FILESYSTEM HANDSHAKE ---
+            // Secure Native File Saving Bridge
             window.addEventListener('message', async (event) => {
                 if (event.data && event.data.type === 'SIMBI_FILE_DOWNLOAD') {
                     const { filename, rawBase64 } = event.data;
                     
                     try {
-                        const { Filesystem } = Capacitor.Plugins;
-                        
+                        // Request runtime permissions directly on the phone screen
+                        if (Filesystem.requestPermissions) {
+                            await Filesystem.requestPermissions();
+                        }
+
                         await Filesystem.writeFile({
                             path: filename,
                             data: rawBase64,
-                            directory: 'DOCUMENTS' // Saves straight to the system Documents workspace
+                            directory: 'DOCUMENTS'
                         });
 
-                        alert(`Successfully saved: ${filename} to your device Documents directory!`);
+                        alert(`Successfully saved: ${filename} to your Documents folder!`);
                     } catch (error) {
                         console.error('Failed to write file natively:', error);
                         alert('Storage save error: ' + error.message);
@@ -104,7 +107,7 @@
             });
         }
 
-        // --- 3. SWIPE/PULL DOWN TO REFRESH LOGIC ENGINE ---
+        // Pull Down To Refresh Handling
         let startY = 0;
         let activePulling = false;
 
@@ -133,11 +136,10 @@
             const totalDistance = endY - startY;
 
             if (totalDistance > 140) {
-                // Lock spinner position down momentarily and refresh the frame target
                 spinner.style.top = '25px';
                 spinnerSvg.style.animation = 'spin-loop 0.8s linear infinite';
                 
-                frameView.src = frameView.src; // Seamless webview asset reload
+                frameView.src = frameView.src;
 
                 setTimeout(() => {
                     spinner.style.top = '-60px';
